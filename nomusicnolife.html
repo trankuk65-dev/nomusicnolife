@@ -1,0 +1,1130 @@
+<!DOCTYPE html>
+<html lang="vi" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AuraMusic - Không Gian Âm Nhạc Đỉnh Cao</title>
+    <!-- Tải Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Font Inter từ Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <!-- Font Awesome cho các biểu tượng sắc nét -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                    },
+                    colors: {
+                        dark: {
+                            950: '#09090b',
+                            900: '#121215',
+                            800: '#18181c',
+                            700: '#27272e',
+                            600: '#3f3f46'
+                        },
+                        brand: {
+                            500: '#8b5cf6', // Tím sang trọng
+                            400: '#a78bfa',
+                            600: '#7c3aed',
+                            accent: '#ec4899' // Hồng điểm nhấn
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        /* Tùy chỉnh thanh cuộn (Scrollbar) */
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: rgba(255, 255, 255, 0.15);
+            border-radius: 9999px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: rgba(255, 255, 255, 0.3);
+        }
+
+        /* Hiệu ứng kính mờ (Glassmorphism) */
+        .glass {
+            background: rgba(18, 18, 21, 0.75);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+        }
+
+        .glass-player {
+            background: rgba(12, 12, 15, 0.9);
+            backdrop-filter: blur(24px);
+            -webkit-backdrop-filter: blur(24px);
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        /* Hiệu ứng sóng nhạc động (Equalizer bars) */
+        @keyframes eq-bar {
+            0%, 100% { height: 20%; }
+            50% { height: 100%; }
+        }
+        .eq-1 { animation: eq-bar 0.8s ease-in-out infinite; }
+        .eq-2 { animation: eq-bar 0.6s ease-in-out infinite 0.2s; }
+        .eq-3 { animation: eq-bar 0.9s ease-in-out infinite 0.4s; }
+        .eq-4 { animation: eq-bar 0.7s ease-in-out infinite 0.1s; }
+
+        /* Tùy chỉnh thanh trượt input range (Progress & Volume) */
+        input[type="range"] {
+            -webkit-appearance: none;
+            appearance: none;
+            background: transparent;
+            cursor: pointer;
+        }
+        input[type="range"]::-webkit-slider-runnable-track {
+            height: 4px;
+            border-radius: 9999px;
+        }
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            height: 12px;
+            width: 12px;
+            border-radius: 50%;
+            background: #ffffff;
+            margin-top: -4px;
+            box-shadow: 0 0 10px rgba(139, 92, 246, 0.8);
+            opacity: 0;
+            transition: opacity 0.15s ease, transform 0.15s ease;
+        }
+        .range-group:hover input[type="range"]::-webkit-slider-thumb {
+            opacity: 1;
+        }
+        input[type="range"]::-webkit-slider-thumb:hover {
+            transform: scale(1.25);
+        }
+    </style>
+</head>
+<body class="bg-dark-950 text-gray-100 font-sans antialiased selection:bg-brand-500 selection:text-white overflow-x-hidden">
+
+    <!-- Thông báo Toast (Thay thế cho alert) -->
+    <div id="toast-container" class="fixed top-5 right-5 z-50 flex flex-col gap-2 pointer-events-none"></div>
+
+    <!-- Bố cục chính -->
+    <div class="flex h-screen pb-24 overflow-hidden">
+        
+        <!-- Overlay nền tối cho Sidebar trên Mobile -->
+        <div id="sidebar-overlay" onclick="toggleMobileSidebar()" class="fixed inset-0 bg-black/60 z-30 hidden lg:hidden backdrop-blur-sm transition-opacity"></div>
+
+        <!-- Thanh điều hướng bên trái (Sidebar) -->
+        <aside id="sidebar" class="fixed lg:static inset-y-0 left-0 z-40 w-64 bg-dark-900 border-r border-white/5 flex flex-col justify-between transform -translate-x-full lg:translate-x-0 transition-transform duration-300 ease-in-out">
+            <div class="p-6">
+                <!-- Logo -->
+                <div class="flex items-center justify-between mb-8">
+                    <a href="#" class="flex items-center gap-3 group">
+                        <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-brand-600 to-brand-accent flex items-center justify-center shadow-lg shadow-brand-500/30 group-hover:scale-105 transition-transform">
+                            <i class="fa-solid fa-wave-square text-white text-lg"></i>
+                        </div>
+                        <span class="text-xl font-extrabold tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-white to-gray-400">AuraMusic</span>
+                    </a>
+                    <button onclick="toggleMobileSidebar()" class="lg:hidden text-gray-400 hover:text-white p-2">
+                        <i class="fa-solid fa-xmark text-xl"></i>
+                    </button>
+                </div>
+
+                <!-- Menu chính -->
+                <nav class="space-y-1.5 mb-8">
+                    <p class="px-3 text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">Menu</p>
+                    <button onclick="switchTab('home', this)" class="nav-btn w-full flex items-center gap-3.5 px-3.5 py-2.5 rounded-xl text-sm font-medium bg-white/10 text-white transition-all">
+                        <i class="fa-solid fa-house w-5 text-center text-brand-400"></i>
+                        <span>Trang chủ</span>
+                    </button>
+                    <button onclick="switchTab('explore', this)" class="nav-btn w-full flex items-center gap-3.5 px-3.5 py-2.5 rounded-xl text-sm font-medium text-gray-400 hover:text-white hover:bg-white/5 transition-all">
+                        <i class="fa-solid fa-compass w-5 text-center"></i>
+                        <span>Khám phá</span>
+                    </button>
+                    <button onclick="switchTab('library', this)" class="nav-btn w-full flex items-center gap-3.5 px-3.5 py-2.5 rounded-xl text-sm font-medium text-gray-400 hover:text-white hover:bg-white/5 transition-all">
+                        <i class="fa-solid fa-book-bookmark w-5 text-center"></i>
+                        <span>Thư viện</span>
+                    </button>
+                </nav>
+
+                <!-- Danh sách phát cá nhân -->
+                <div>
+                    <div class="flex items-center justify-between px-3 mb-3">
+                        <p class="text-xs font-semibold text-gray-500 uppercase tracking-wider">Danh sách phát</p>
+                        <button onclick="createNewPlaylist()" title="Tạo danh sách phát mới" class="text-gray-400 hover:text-white transition-colors p-1">
+                            <i class="fa-solid fa-plus text-xs"></i>
+                        </button>
+                    </div>
+                    <ul id="playlist-menu" class="space-y-1 max-h-56 overflow-y-auto pr-1">
+                        <li>
+                            <button onclick="filterByCategory('all', 'Tất cả bài hát')" class="w-full flex items-center gap-3 px-3.5 py-2 rounded-xl text-sm text-gray-400 hover:text-white hover:bg-white/5 transition-all text-left">
+                                <span class="w-6 h-6 rounded-lg bg-gradient-to-br from-pink-500 to-rose-600 flex items-center justify-center text-[10px] text-white shrink-0">
+                                    <i class="fa-solid fa-heart"></i>
+                                </span>
+                                <span class="truncate">Bài hát đã thích</span>
+                            </button>
+                        </li>
+                        <li>
+                            <button onclick="filterByCategory('Chill', 'Chill & Thư Giãn')" class="w-full flex items-center gap-3 px-3.5 py-2 rounded-xl text-sm text-gray-400 hover:text-white hover:bg-white/5 transition-all text-left">
+                                <span class="w-6 h-6 rounded-lg bg-gradient-to-br from-indigo-500 to-cyan-500 flex items-center justify-center text-[10px] text-white shrink-0">
+                                    <i class="fa-solid fa-cloud-moon"></i>
+                                </span>
+                                <span class="truncate">Chill Đêm Muộn</span>
+                            </button>
+                        </li>
+                        <li>
+                            <button onclick="filterByCategory('Lofi', 'Lofi Học Tập & Làm Việc')" class="w-full flex items-center gap-3 px-3.5 py-2 rounded-xl text-sm text-gray-400 hover:text-white hover:bg-white/5 transition-all text-left">
+                                <span class="w-6 h-6 rounded-lg bg-gradient-to-br from-amber-500 to-orange-600 flex items-center justify-center text-[10px] text-white shrink-0">
+                                    <i class="fa-solid fa-mug-hot"></i>
+                                </span>
+                                <span class="truncate">Lofi Tập Trung</span>
+                            </button>
+                        </li>
+                        <li>
+                            <button onclick="filterByCategory('V-Pop', 'V-Pop Thịnh Hành')" class="w-full flex items-center gap-3 px-3.5 py-2 rounded-xl text-sm text-gray-400 hover:text-white hover:bg-white/5 transition-all text-left">
+                                <span class="w-6 h-6 rounded-lg bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center text-[10px] text-white shrink-0">
+                                    <i class="fa-solid fa-fire"></i>
+                                </span>
+                                <span class="truncate">V-Pop Tuyển Chọn</span>
+                            </button>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- Thẻ nâng cấp VIP ở đáy Sidebar -->
+            <div class="p-4 m-4 rounded-2xl bg-gradient-to-br from-brand-600/20 to-brand-accent/20 border border-brand-500/20">
+                <div class="flex items-center gap-2 mb-1.5">
+                    <span class="px-2 py-0.5 text-[10px] font-bold uppercase bg-brand-500 text-white rounded-full">Lossless</span>
+                    <span class="text-xs font-semibold text-white">Aura Hi-Fi</span>
+                </div>
+                <p class="text-xs text-gray-400 mb-3 leading-relaxed">Trải nghiệm âm thanh không gian 3D chuẩn phòng thu.</p>
+                <button onclick="showToast('Bạn đang sử dụng gói trải nghiệm Aura Hi-Fi miễn phí!')" class="w-full py-2 rounded-xl bg-white text-dark-950 text-xs font-bold hover:bg-gray-200 transition-colors">
+                    Khám phá ngay
+                </button>
+            </div>
+        </aside>
+
+        <!-- Khu vực nội dung chính (Main Content) -->
+        <main class="flex-1 flex flex-col h-full overflow-y-auto bg-gradient-to-b from-dark-800/60 via-dark-950 to-dark-950 relative">
+            
+            <!-- Thanh Header cố định phía trên (Tìm kiếm & Tài khoản) -->
+            <header class="sticky top-0 z-20 glass px-4 sm:px-8 py-4 flex items-center justify-between gap-4">
+                <div class="flex items-center gap-3 flex-1 max-w-xl">
+                    <!-- Nút mở menu trên thiết bị di động -->
+                    <button onclick="toggleMobileSidebar()" class="lg:hidden p-2.5 rounded-xl bg-white/5 hover:bg-white/10 text-gray-300">
+                        <i class="fa-solid fa-bars"></i>
+                    </button>
+
+                    <!-- Thanh tìm kiếm bài hát -->
+                    <div class="relative flex-1">
+                        <i class="fa-solid fa-magnifying-glass absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 text-sm"></i>
+                        <input 
+                            type="text" 
+                            id="search-input"
+                            oninput="handleSearch(this.value)"
+                            placeholder="Tìm kiếm bài hát, nghệ sĩ, thể loại..." 
+                            class="w-full bg-white/5 hover:bg-white/10 focus:bg-dark-800 text-sm text-white placeholder-gray-400 pl-11 pr-10 py-2.5 rounded-full border border-white/10 focus:border-brand-500 focus:outline-none transition-all"
+                        >
+                        <button id="clear-search" onclick="clearSearch()" class="hidden absolute right-3.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-white text-xs">
+                            <i class="fa-solid fa-circle-xmark"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Khu vực bên phải Header -->
+                <div class="flex items-center gap-3">
+                    <button onclick="showToast('Không có thông báo mới nào')" class="w-10 h-10 rounded-full bg-white/5 hover:bg-white/10 flex items-center justify-center text-gray-300 hover:text-white transition-colors relative">
+                        <i class="fa-regular fa-bell"></i>
+                        <span class="w-2 h-2 rounded-full bg-brand-accent absolute top-2.5 right-2.5"></span>
+                    </button>
+                    <div class="flex items-center gap-2.5 pl-2 pr-3 py-1.5 rounded-full bg-white/5 border border-white/10 cursor-pointer hover:bg-white/10 transition-colors" onclick="showToast('Xin chào, Người Yêu Nhạc!')">
+                        <div class="w-7 h-7 rounded-full bg-gradient-to-tr from-brand-500 to-pink-500 flex items-center justify-center text-xs font-bold text-white">
+                            A
+                        </div>
+                        <span class="text-xs font-medium text-gray-200 hidden sm:inline">Alex Nguyen</span>
+                    </div>
+                </div>
+            </header>
+
+            <!-- Phần nội dung cuộn -->
+            <div class="px-4 sm:px-8 py-6 space-y-8 max-w-7xl mx-auto w-full">
+                
+                <!-- Banner Bài Hát Nổi Bật (Featured Hero) -->
+                <section id="hero-section" class="relative rounded-3xl overflow-hidden bg-gradient-to-r from-indigo-950 via-purple-950 to-dark-900 border border-white/10 p-6 sm:p-8 lg:p-10 shadow-2xl">
+                    <!-- Hiệu ứng ánh sáng nền -->
+                    <div class="absolute -top-24 -right-24 w-80 h-80 bg-brand-500/30 rounded-full blur-3xl pointer-events-none"></div>
+                    <div class="absolute -bottom-24 left-1/3 w-72 h-72 bg-brand-accent/20 rounded-full blur-3xl pointer-events-none"></div>
+
+                    <div class="relative z-10 flex flex-col md:flex-row items-center gap-6 lg:gap-10">
+                        <!-- Ảnh bìa bài hát nổi bật -->
+                        <div class="relative group w-44 h-44 sm:w-52 sm:h-52 shrink-0 rounded-2xl overflow-hidden shadow-2xl shadow-black/60 border border-white/15">
+                            <img id="hero-cover" src="https://images.unsplash.com/photo-1614613535308-eb5fbd3d2c17?auto=format&fit=crop&w=600&q=80" alt="Bìa album nổi bật" onerror="this.src='https://placehold.co/400x400/1e1b4b/a78bfa?text=AuraMusic'" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500">
+                            <div class="absolute inset-0 bg-black/30 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                                <button onclick="playSongById(0)" class="w-14 h-14 rounded-full bg-brand-500 text-white flex items-center justify-center shadow-lg hover:scale-110 transition-transform">
+                                    <i class="fa-solid fa-play text-xl ml-1"></i>
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Thông tin nổi bật -->
+                        <div class="flex-1 text-center md:text-left">
+                            <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/10 backdrop-blur-md text-xs font-semibold text-brand-400 mb-3 border border-white/10">
+                                <i class="fa-solid fa-sparkles"></i>
+                                <span>ĐỀ XUẤT HÔM NAY</span>
+                            </div>
+                            <h1 id="hero-title" class="text-2xl sm:text-4xl lg:text-5xl font-extrabold text-white tracking-tight mb-2">
+                                Dạ Khúc Ánh Trăng
+                            </h1>
+                            <p id="hero-artist" class="text-sm sm:text-base text-gray-300 mb-6 max-w-xl">
+                                Hòa mình vào giai điệu Ambient & Chill nhẹ nhàng được tổng hợp từ Web Audio Synthesizer. Thư giãn tâm trí sau một ngày dài.
+                            </p>
+                            <div class="flex flex-wrap items-center justify-center md:justify-start gap-3">
+                                <button onclick="playSongById(0)" class="px-7 py-3 rounded-full bg-gradient-to-r from-brand-500 to-brand-accent hover:from-brand-600 hover:to-pink-600 text-white font-semibold text-sm shadow-lg shadow-brand-500/30 flex items-center gap-2.5 transition-all hover:scale-105 active:scale-95">
+                                    <i class="fa-solid fa-play"></i>
+                                    <span>Phát Ngay</span>
+                                </button>
+                                <button onclick="toggleLikeCurrentHero()" class="px-5 py-3 rounded-full bg-white/10 hover:bg-white/15 text-white font-medium text-sm border border-white/10 flex items-center gap-2 transition-all">
+                                    <i class="fa-regular fa-heart"></i>
+                                    <span>Yêu thích</span>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Bộ lọc thể loại nhanh (Filter Pills) -->
+                <section>
+                    <div class="flex items-center justify-between mb-4">
+                        <h2 id="section-heading" class="text-xl font-bold text-white tracking-tight">Thịnh Hành & Tuyển Chọn</h2>
+                        <span id="song-count-badge" class="text-xs font-medium text-gray-400 bg-white/5 px-3 py-1 rounded-full">8 bài hát</span>
+                    </div>
+
+                    <div class="flex items-center gap-2 overflow-x-auto pb-2 no-scrollbar" id="category-filters">
+                        <button onclick="filterByCategory('all', 'Thịnh Hành & Tuyển Chọn', this)" class="cat-pill px-4 py-1.5 rounded-full text-xs font-semibold bg-white text-dark-950 transition-all shrink-0">
+                            Tất cả
+                        </button>
+                        <button onclick="filterByCategory('Chill', 'Nhạc Chill Thư Giãn', this)" class="cat-pill px-4 py-1.5 rounded-full text-xs font-medium bg-white/5 text-gray-300 hover:bg-white/10 hover:text-white transition-all shrink-0">
+                            Chill & Ambient
+                        </button>
+                        <button onclick="filterByCategory('Lofi', 'Lofi Beats Học Tập', this)" class="cat-pill px-4 py-1.5 rounded-full text-xs font-medium bg-white/5 text-gray-300 hover:bg-white/10 hover:text-white transition-all shrink-0">
+                            Lofi Beats
+                        </button>
+                        <button onclick="filterByCategory('V-Pop', 'Giai Điệu V-Pop', this)" class="cat-pill px-4 py-1.5 rounded-full text-xs font-medium bg-white/5 text-gray-300 hover:bg-white/10 hover:text-white transition-all shrink-0">
+                            V-Pop Ballad
+                        </button>
+                        <button onclick="filterByCategory('Electronic', 'Electronic & Synthwave', this)" class="cat-pill px-4 py-1.5 rounded-full text-xs font-medium bg-white/5 text-gray-300 hover:bg-white/10 hover:text-white transition-all shrink-0">
+                            Synthwave
+                        </button>
+                    </div>
+                </section>
+
+                <!-- Danh sách bài hát (Song List) -->
+                <section class="bg-dark-900/60 border border-white/5 rounded-3xl p-3 sm:p-5">
+                    <!-- Tiêu đề cột (Ẩn trên mobile nhỏ) -->
+                    <div class="hidden sm:grid grid-cols-12 gap-4 px-4 py-2.5 text-xs font-semibold text-gray-500 uppercase tracking-wider border-b border-white/5 mb-2">
+                        <div class="col-span-1 text-center">#</div>
+                        <div class="col-span-5">Bài hát</div>
+                        <div class="col-span-3">Album / Thể loại</div>
+                        <div class="col-span-2 text-right">Thời lượng</div>
+                        <div class="col-span-1 text-center">Thích</div>
+                    </div>
+
+                    <!-- Container chứa các dòng bài hát -->
+                    <div id="song-list-container" class="space-y-1">
+                        <!-- Dữ liệu bài hát sẽ được render bằng JavaScript -->
+                    </div>
+
+                    <!-- Trạng thái trống khi tìm kiếm không thấy -->
+                    <div id="empty-state" class="hidden py-12 text-center">
+                        <div class="w-16 h-16 rounded-full bg-white/5 flex items-center justify-center mx-auto mb-3 text-gray-500">
+                            <i class="fa-solid fa-music text-2xl"></i>
+                        </div>
+                        <h3 class="text-base font-semibold text-gray-300">Không tìm thấy bài hát phù hợp</h3>
+                        <p class="text-xs text-gray-500 mt-1">Hãy thử tìm kiếm với từ khóa khác hoặc xóa bộ lọc.</p>
+                    </div>
+                </section>
+
+            </div>
+        </main>
+    </div>
+
+    <!-- Thanh Trình Phát Nhạc Cố Định Ở Dưới Cùng (Fixed Bottom Player) -->
+    <footer class="fixed bottom-0 inset-x-0 h-24 glass-player z-50 px-4 sm:px-6 flex items-center justify-between gap-4">
+        
+        <!-- 1. Thông tin bài hát đang phát (Bên trái) -->
+        <div class="flex items-center gap-3.5 w-1/3 min-w-[140px] max-w-xs">
+            <div class="relative w-14 h-14 rounded-xl overflow-hidden bg-dark-800 shrink-0 shadow-md border border-white/10">
+                <img id="player-cover" src="https://images.unsplash.com/photo-1614613535308-eb5fbd3d2c17?auto=format&fit=crop&w=200&q=80" alt="Cover" onerror="this.src='https://placehold.co/150x150/1e1b4b/a78bfa?text=Music'" class="w-full h-full object-cover">
+            </div>
+            <div class="min-w-0 flex-1">
+                <h4 id="player-title" class="text-sm font-bold text-white truncate">Dạ Khúc Ánh Trăng</h4>
+                <p id="player-artist" class="text-xs text-gray-400 truncate mt-0.5">Aura Synth Orchestra</p>
+            </div>
+            <button id="player-like-btn" onclick="toggleLikeCurrentSong()" class="text-gray-400 hover:text-brand-accent transition-colors p-2 hidden sm:inline-block" title="Yêu thích">
+                <i class="fa-regular fa-heart"></i>
+            </button>
+        </div>
+
+        <!-- 2. Bộ điều khiển trung tâm & Thanh tiến trình (Ở giữa) -->
+        <div class="flex flex-col items-center justify-center flex-1 max-w-xl">
+            <!-- Các nút điều khiển -->
+            <div class="flex items-center gap-4 sm:gap-6 mb-1.5">
+                <button id="shuffle-btn" onclick="toggleShuffle()" class="text-gray-400 hover:text-white transition-colors text-xs sm:text-sm p-1.5" title="Phát ngẫu nhiên">
+                    <i class="fa-solid fa-shuffle"></i>
+                </button>
+                <button onclick="prevSong()" class="text-gray-300 hover:text-white transition-colors text-base sm:text-lg p-1.5" title="Bài trước">
+                    <i class="fa-solid fa-backward-step"></i>
+                </button>
+                <button id="play-pause-btn" onclick="togglePlay()" class="w-10 h-10 sm:w-11 sm:h-11 rounded-full bg-white text-dark-950 hover:scale-105 active:scale-95 flex items-center justify-center shadow-lg shadow-white/10 transition-all" title="Phát / Tạm dừng">
+                    <i id="play-pause-icon" class="fa-solid fa-play text-base ml-0.5"></i>
+                </button>
+                <button onclick="nextSong()" class="text-gray-300 hover:text-white transition-colors text-base sm:text-lg p-1.5" title="Bài tiếp theo">
+                    <i class="fa-solid fa-forward-step"></i>
+                </button>
+                <button id="repeat-btn" onclick="toggleRepeat()" class="text-gray-400 hover:text-white transition-colors text-xs sm:text-sm p-1.5 relative" title="Lặp lại">
+                    <i class="fa-solid fa-repeat"></i>
+                </button>
+            </div>
+
+            <!-- Thanh tiến trình tua nhạc (Progress Bar) -->
+            <div class="w-full flex items-center gap-2.5 range-group">
+                <span id="current-time" class="text-[11px] font-medium text-gray-400 w-9 text-right tabular-nums">0:00</span>
+                <div class="relative flex-1 flex items-center">
+                    <input 
+                        type="range" 
+                        id="progress-bar" 
+                        min="0" 
+                        max="100" 
+                        value="0" 
+                        oninput="seekSong(this.value)"
+                        class="w-full z-10"
+                    >
+                    <!-- Thanh nền tiến trình đã chạy -->
+                    <div class="absolute inset-x-0 h-1 bg-white/15 rounded-full overflow-hidden pointer-events-none">
+                        <div id="progress-fill" class="h-full bg-gradient-to-r from-brand-500 to-brand-accent w-0 transition-all duration-75"></div>
+                    </div>
+                </div>
+                <span id="total-duration" class="text-[11px] font-medium text-gray-400 w-9 tabular-nums">2:45</span>
+            </div>
+        </div>
+
+        <!-- 3. Điều chỉnh âm lượng & Tiện ích (Bên phải) -->
+        <div class="hidden md:flex items-center justify-end gap-3 w-1/3 max-w-xs">
+            <span class="text-[10px] font-medium px-2 py-0.5 rounded bg-brand-500/20 text-brand-400 border border-brand-500/30" title="Âm thanh được tổng hợp trực tiếp bằng Web Audio API">
+                WebAudio Synth
+            </span>
+            <button id="mute-btn" onclick="toggleMute()" class="text-gray-400 hover:text-white transition-colors p-1.5" title="Tắt/Bật tiếng">
+                <i id="volume-icon" class="fa-solid fa-volume-high text-sm"></i>
+            </button>
+            <div class="w-24 relative flex items-center range-group">
+                <input 
+                    type="range" 
+                    id="volume-bar" 
+                    min="0" 
+                    max="100" 
+                    value="75" 
+                    oninput="setVolume(this.value)"
+                    class="w-full z-10"
+                >
+                <div class="absolute inset-x-0 h-1 bg-white/15 rounded-full overflow-hidden pointer-events-none">
+                    <div id="volume-fill" class="h-full bg-white w-3/4"></div>
+                </div>
+            </div>
+        </div>
+    </footer>
+
+    <!-- Mã JavaScript Xử Lý Logic & Web Audio API -->
+    <script>
+        /**
+         * DỮ LIỆU DANH SÁCH BÀI HÁT
+         * Mỗi bài hát có thang âm (scale) và tempo riêng để Web Audio API tạo ra giai điệu độc đáo!
+         */
+        const songsData = [
+            {
+                id: 0,
+                title: "Dạ Khúc Ánh Trăng",
+                artist: "Aura Synth Orchestra",
+                album: "Đêm Tĩnh Lặng",
+                category: "Chill",
+                duration: 165, // giây
+                liked: true,
+                cover: "https://images.unsplash.com/photo-1614613535308-eb5fbd3d2c17?auto=format&fit=crop&w=400&q=80",
+                // Các tần số nốt nhạc (Hz) theo hợp âm Am7 - Fmaj7 - Cmaj7 - G6
+                notes: [220.00, 261.63, 329.63, 392.00, 349.23, 440.00, 523.25, 392.00],
+                tempo: 550, // ms mỗi nốt
+                waveType: "sine"
+            },
+            {
+                id: 1,
+                title: "Mưa Rơi Trên Phố Cổ",
+                artist: "Lofi Hà Nội",
+                album: "Ký Ức Mùa Thu",
+                category: "Lofi",
+                duration: 142,
+                liked: false,
+                cover: "https://images.unsplash.com/photo-1518609878373-06d740f60d8b?auto=format&fit=crop&w=400&q=80",
+                notes: [261.63, 311.13, 392.00, 466.16, 349.23, 415.30, 523.25, 392.00],
+                tempo: 480,
+                waveType: "triangle"
+            },
+            {
+                id: 2,
+                title: "Chân Trời Mới (Acoustic)",
+                artist: "Minh Quân & The Band",
+                album: "Thanh Xuân Rực Rỡ",
+                category: "V-Pop",
+                duration: 210,
+                liked: true,
+                cover: "https://images.unsplash.com/photo-1470225620780-dba8ba36b745?auto=format&fit=crop&w=400&q=80",
+                notes: [293.66, 369.99, 440.00, 587.33, 493.88, 440.00, 369.99, 329.63],
+                tempo: 420,
+                waveType: "sine"
+            },
+            {
+                id: 3,
+                title: "Ánh Đèn Neon 2088",
+                artist: "CyberWave VN",
+                album: "Sài Gòn Tương Lai",
+                category: "Electronic",
+                duration: 188,
+                liked: false,
+                cover: "https://images.unsplash.com/photo-1514525253161-7a46d19cd819?auto=format&fit=crop&w=400&q=80",
+                notes: [164.81, 246.94, 329.63, 493.88, 196.00, 293.66, 392.00, 587.33],
+                tempo: 320,
+                waveType: "triangle"
+            },
+            {
+                id: 4,
+                title: "Cà Phê Sáng Chủ Nhật",
+                artist: "Chillhop Vietnam",
+                album: "Góc Nhỏ Bình Yên",
+                category: "Lofi",
+                duration: 154,
+                liked: true,
+                cover: "https://images.unsplash.com/photo-1459749411175-04bf5292ceea?auto=format&fit=crop&w=400&q=80",
+                notes: [349.23, 440.00, 523.25, 659.25, 587.33, 493.88, 440.00, 392.00],
+                tempo: 500,
+                waveType: "sine"
+            },
+            {
+                id: 5,
+                title: "Giấc Mơ Giữa Rừng Thông",
+                artist: "Đà Lạt Acoustic",
+                album: "Sương Mù Phố Núi",
+                category: "Chill",
+                duration: 195,
+                liked: false,
+                cover: "https://images.unsplash.com/photo-1507838153414-b4b713384a76?auto=format&fit=crop&w=400&q=80",
+                notes: [196.00, 246.94, 293.66, 369.99, 440.00, 369.99, 293.66, 246.94],
+                tempo: 600,
+                waveType: "sine"
+            },
+            {
+                id: 6,
+                title: "Gửi Người Phương Xa",
+                artist: "Hải Yến",
+                album: "Những Bản Tình Ca",
+                category: "V-Pop",
+                duration: 230,
+                liked: false,
+                cover: "https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?auto=format&fit=crop&w=400&q=80",
+                notes: [261.63, 329.63, 392.00, 523.25, 493.88, 392.00, 329.63, 293.66],
+                tempo: 520,
+                waveType: "triangle"
+            },
+            {
+                id: 7,
+                title: "Du Hành Vũ Trụ",
+                artist: "Stellar Drift",
+                album: "Beyond The Stars",
+                category: "Electronic",
+                duration: 176,
+                liked: true,
+                cover: "https://images.unsplash.com/photo-1462331940025-496dfbfc7564?auto=format&fit=crop&w=400&q=80",
+                notes: [220.00, 329.63, 440.00, 659.25, 587.33, 440.00, 329.63, 261.63],
+                tempo: 360,
+                waveType: "sine"
+            }
+        ];
+
+        // Trạng thái ứng dụng
+        let currentSongIndex = 0;
+        let isPlaying = false;
+        let isShuffle = false;
+        let repeatMode = 0; // 0: Không lặp, 1: Lặp tất cả, 2: Lặp 1 bài
+        let currentTime = 0;
+        let volume = 0.75;
+        let isMuted = false;
+        let activeCategory = 'all';
+        let searchQuery = '';
+
+        // Biến quản lý Timer và Web Audio API
+        let progressInterval = null;
+        let synthInterval = null;
+        let audioCtx = null;
+        let masterGain = null;
+        let noteStep = 0;
+
+        /**
+         * KHỞI TẠO WEB AUDIO API (Tạo âm thanh giai điệu piano điện tử êm dịu)
+         */
+        function initAudioContext() {
+            if (!audioCtx) {
+                const AudioContext = window.AudioContext || window.webkitAudioContext;
+                audioCtx = new AudioContext();
+                masterGain = audioCtx.createGain();
+                masterGain.gain.setValueAtTime(isMuted ? 0 : volume * 0.25, audioCtx.currentTime);
+                masterGain.connect(audioCtx.destination);
+            }
+            if (audioCtx.state === 'suspended') {
+                audioCtx.resume();
+            }
+        }
+
+        // Phát một nốt nhạc êm ái với hiệu ứng Attack & Release (ADSR)
+        function playSynthNote(freq, waveType = 'sine', durationSec = 0.8) {
+            if (!audioCtx || isMuted || volume === 0) return;
+
+            try {
+                const now = audioCtx.currentTime;
+                const osc = audioCtx.createOscillator();
+                const noteGain = audioCtx.createGain();
+
+                osc.type = waveType;
+                osc.frequency.setValueAtTime(freq, now);
+
+                // Tạo hiệu ứng âm thanh mềm mại như tiếng đàn điện tử / chuông gió
+                noteGain.gain.setValueAtTime(0.0001, now);
+                noteGain.gain.exponentialRampToValueAtTime(0.4, now + 0.06); // Attack
+                noteGain.gain.exponentialRampToValueAtTime(0.0001, now + durationSec); // Release
+
+                osc.connect(noteGain);
+                noteGain.connect(masterGain);
+
+                osc.start(now);
+                osc.stop(now + durationSec + 0.05);
+            } catch (e) {
+                console.error("Lỗi phát âm thanh Web Audio:", e);
+            }
+        }
+
+        // Bắt đầu vòng lặp giai điệu của bài hát hiện tại
+        function startSynthLoop() {
+            stopSynthLoop();
+            initAudioContext();
+            const song = songsData[currentSongIndex];
+            noteStep = 0;
+
+            // Phát ngay nốt đầu tiên
+            playSynthNote(song.notes[0], song.waveType, song.tempo / 1000 * 1.6);
+            noteStep++;
+
+            synthInterval = setInterval(() => {
+                if (!isPlaying) return;
+                const freq = song.notes[noteStep % song.notes.length];
+                // Thỉnh thoảng thêm nốt trầm (quãng 8 dưới) cho dày tiếng
+                if (noteStep % 4 === 0) {
+                    playSynthNote(freq / 2, 'sine', song.tempo / 1000 * 2.2);
+                }
+                playSynthNote(freq, song.waveType, song.tempo / 1000 * 1.6);
+                noteStep++;
+            }, song.tempo);
+        }
+
+        function stopSynthLoop() {
+            if (synthInterval) {
+                clearInterval(synthInterval);
+                synthInterval = null;
+            }
+        }
+
+        /**
+         * ĐỊNH DẠNG THỜI GIAN (Giây -> Phút:Giây)
+         */
+        function formatTime(seconds) {
+            const mins = Math.floor(seconds / 60);
+            const secs = Math.floor(seconds % 60);
+            return `${mins}:${secs < 10 ? '0' : ''}${secs}`;
+        }
+
+        /**
+         * HIỂN THỊ DANH SÁCH BÀI HÁT
+         */
+        function renderSongList() {
+            const container = document.getElementById('song-list-container');
+            const emptyState = document.getElementById('empty-state');
+            const countBadge = document.getElementById('song-count-badge');
+
+            // Lọc theo thể loại và từ khóa tìm kiếm
+            const filteredSongs = songsData.filter(song => {
+                const matchesCategory = activeCategory === 'all' || song.category === activeCategory;
+                const matchesSearch = song.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                                      song.artist.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                                      song.album.toLowerCase().includes(searchQuery.toLowerCase());
+                return matchesCategory && matchesSearch;
+            });
+
+            countBadge.textContent = `${filteredSongs.length} bài hát`;
+
+            if (filteredSongs.length === 0) {
+                container.innerHTML = '';
+                emptyState.classList.remove('hidden');
+                return;
+            }
+
+            emptyState.classList.add('hidden');
+
+            container.innerHTML = filteredSongs.map((song, idx) => {
+                const isCurrent = song.id === songsData[currentSongIndex].id;
+                const activeRowClass = isCurrent ? 'bg-white/10 border border-brand-500/30' : 'hover:bg-white/5 border border-transparent';
+                const titleColor = isCurrent ? 'text-brand-400' : 'text-white';
+
+                return `
+                    <div onclick="playSongById(${song.id})" class="group grid grid-cols-12 items-center gap-3 sm:gap-4 px-3 sm:px-4 py-2.5 rounded-2xl cursor-pointer transition-all ${activeRowClass}">
+                        
+                        <!-- Số thứ tự / Sóng nhạc động -->
+                        <div class="col-span-2 sm:col-span-1 flex items-center justify-center">
+                            ${isCurrent && isPlaying ? `
+                                <div class="flex items-end gap-0.5 h-4 w-4 justify-center">
+                                    <span class="w-1 bg-brand-400 rounded-full eq-1"></span>
+                                    <span class="w-1 bg-brand-accent rounded-full eq-2"></span>
+                                    <span class="w-1 bg-brand-400 rounded-full eq-3"></span>
+                                    <span class="w-1 bg-brand-accent rounded-full eq-4"></span>
+                                </div>
+                            ` : `
+                                <span class="text-xs font-medium text-gray-500 group-hover:hidden">${idx + 1}</span>
+                                <i class="fa-solid fa-play text-xs text-white hidden group-hover:inline-block"></i>
+                            `}
+                        </div>
+
+                        <!-- Ảnh bìa + Tên bài hát + Nghệ sĩ -->
+                        <div class="col-span-7 sm:col-span-5 flex items-center gap-3 min-w-0">
+                            <div class="relative w-11 h-11 rounded-xl overflow-hidden shrink-0 bg-dark-800">
+                                <img src="${song.cover}" alt="${song.title}" onerror="this.src='https://placehold.co/100x100/1e1b4b/a78bfa?text=♪'" class="w-full h-full object-cover">
+                            </div>
+                            <div class="min-w-0 flex-1">
+                                <p class="text-sm font-semibold truncate ${titleColor} group-hover:text-brand-400 transition-colors">${song.title}</p>
+                                <p class="text-xs text-gray-400 truncate mt-0.5">${song.artist}</p>
+                            </div>
+                        </div>
+
+                        <!-- Album & Thể loại (Ẩn trên mobile) -->
+                        <div class="hidden sm:flex col-span-3 items-center gap-2 min-w-0">
+                            <span class="text-xs text-gray-400 truncate">${song.album}</span>
+                            <span class="px-2 py-0.5 text-[10px] rounded-md bg-white/5 text-gray-400 shrink-0">${song.category}</span>
+                        </div>
+
+                        <!-- Thời lượng -->
+                        <div class="hidden sm:block col-span-2 text-right text-xs font-medium text-gray-400 tabular-nums">
+                            ${formatTime(song.duration)}
+                        </div>
+
+                        <!-- Nút yêu thích -->
+                        <div class="col-span-3 sm:col-span-1 flex items-center justify-end sm:justify-center">
+                            <button onclick="event.stopPropagation(); toggleLikeSong(${song.id})" class="p-2 rounded-full hover:bg-white/10 transition-colors ${song.liked ? 'text-brand-accent' : 'text-gray-500 hover:text-white'}" title="Yêu thích">
+                                <i class="${song.liked ? 'fa-solid' : 'fa-regular'} fa-heart text-sm"></i>
+                            </button>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        /**
+         * CẬP NHẬT GIAO DIỆN TRÌNH PHÁT NHẠC
+         */
+        function updatePlayerUI() {
+            const song = songsData[currentSongIndex];
+            
+            document.getElementById('player-cover').src = song.cover;
+            document.getElementById('player-title').textContent = song.title;
+            document.getElementById('player-artist').textContent = song.artist;
+            document.getElementById('total-duration').textContent = formatTime(song.duration);
+            document.getElementById('current-time').textContent = formatTime(currentTime);
+
+            // Cập nhật icon Play/Pause
+            const playPauseIcon = document.getElementById('play-pause-icon');
+            if (isPlaying) {
+                playPauseIcon.className = 'fa-solid fa-pause text-base';
+            } else {
+                playPauseIcon.className = 'fa-solid fa-play text-base ml-0.5';
+            }
+
+            // Cập nhật nút Like trên Player
+            const playerLikeBtn = document.getElementById('player-like-btn');
+            playerLikeBtn.innerHTML = `<i class="${song.liked ? 'fa-solid text-brand-accent' : 'fa-regular'} fa-heart"></i>`;
+
+            // Cập nhật thanh tiến trình
+            const progressPercent = (currentTime / song.duration) * 100 || 0;
+            document.getElementById('progress-bar').value = progressPercent;
+            document.getElementById('progress-fill').style.width = `${progressPercent}%`;
+
+            renderSongList();
+        }
+
+        /**
+         * ĐIỀU KHIỂN PHÁT / TẠM DỪNG / CHUYỂN BÀI
+         */
+        function playSongById(id) {
+            const index = songsData.findIndex(s => s.id === id);
+            if (index === -1) return;
+
+            if (currentSongIndex === index && isPlaying) {
+                pauseSong();
+                return;
+            }
+
+            if (currentSongIndex !== index) {
+                currentSongIndex = index;
+                currentTime = 0;
+            }
+
+            playSong();
+        }
+
+        function playSong() {
+            isPlaying = true;
+            startSynthLoop();
+            startProgressTimer();
+            updatePlayerUI();
+        }
+
+        function pauseSong() {
+            isPlaying = false;
+            stopSynthLoop();
+            stopProgressTimer();
+            updatePlayerUI();
+        }
+
+        function togglePlay() {
+            if (isPlaying) {
+                pauseSong();
+            } else {
+                playSong();
+            }
+        }
+
+        function nextSong() {
+            if (isShuffle) {
+                let randomIndex;
+                do {
+                    randomIndex = Math.floor(Math.random() * songsData.length);
+                } while (randomIndex === currentSongIndex && songsData.length > 1);
+                currentSongIndex = randomIndex;
+            } else {
+                currentSongIndex = (currentSongIndex + 1) % songsData.length;
+            }
+            currentTime = 0;
+            playSong();
+        }
+
+        function prevSong() {
+            if (currentTime > 5) {
+                // Nếu đã phát hơn 5 giây thì quay lại đầu bài hiện tại
+                currentTime = 0;
+                updatePlayerUI();
+                return;
+            }
+            currentSongIndex = (currentSongIndex - 1 + songsData.length) % songsData.length;
+            currentTime = 0;
+            playSong();
+        }
+
+        // Bộ đếm thời gian chạy bài hát
+        function startProgressTimer() {
+            stopProgressTimer();
+            progressInterval = setInterval(() => {
+                if (!isPlaying) return;
+                const song = songsData[currentSongIndex];
+                currentTime += 1;
+
+                if (currentTime >= song.duration) {
+                    if (repeatMode === 2) {
+                        // Lặp lại 1 bài
+                        currentTime = 0;
+                    } else if (repeatMode === 0 && currentSongIndex === songsData.length - 1 && !isShuffle) {
+                        // Dừng ở cuối danh sách nếu không bật lặp
+                        currentTime = 0;
+                        pauseSong();
+                        return;
+                    } else {
+                        nextSong();
+                        return;
+                    }
+                }
+
+                // Cập nhật thanh tiến trình mượt mà
+                document.getElementById('current-time').textContent = formatTime(currentTime);
+                const percent = (currentTime / song.duration) * 100;
+                document.getElementById('progress-bar').value = percent;
+                document.getElementById('progress-fill').style.width = `${percent}%`;
+            }, 1000);
+        }
+
+        function stopProgressTimer() {
+            if (progressInterval) {
+                clearInterval(progressInterval);
+                progressInterval = null;
+            }
+        }
+
+        // Tua nhạc (Seek)
+        function seekSong(percentValue) {
+            const song = songsData[currentSongIndex];
+            currentTime = Math.floor((percentValue / 100) * song.duration);
+            document.getElementById('current-time').textContent = formatTime(currentTime);
+            document.getElementById('progress-fill').style.width = `${percentValue}%`;
+        }
+
+        /**
+         * ĐIỀU CHỈNH ÂM LƯỢNG & CÁC CHẾ ĐỘ PHÁT
+         */
+        function setVolume(val) {
+            volume = val / 100;
+            isMuted = volume === 0;
+            document.getElementById('volume-fill').style.width = `${val}%`;
+            updateVolumeIcon();
+
+            if (masterGain && audioCtx) {
+                masterGain.gain.setValueAtTime(isMuted ? 0 : volume * 0.25, audioCtx.currentTime);
+            }
+        }
+
+        function toggleMute() {
+            isMuted = !isMuted;
+            const volBar = document.getElementById('volume-bar');
+            const volFill = document.getElementById('volume-fill');
+
+            if (isMuted) {
+                volBar.value = 0;
+                volFill.style.width = '0%';
+            } else {
+                const restoreVal = volume > 0 ? volume * 100 : 75;
+                volume = restoreVal / 100;
+                volBar.value = restoreVal;
+                volFill.style.width = `${restoreVal}%`;
+            }
+
+            updateVolumeIcon();
+            if (masterGain && audioCtx) {
+                masterGain.gain.setValueAtTime(isMuted ? 0 : volume * 0.25, audioCtx.currentTime);
+            }
+        }
+
+        function updateVolumeIcon() {
+            const icon = document.getElementById('volume-icon');
+            if (isMuted || volume === 0) {
+                icon.className = 'fa-solid fa-volume-xmark text-sm text-brand-accent';
+            } else if (volume < 0.5) {
+                icon.className = 'fa-solid fa-volume-low text-sm';
+            } else {
+                icon.className = 'fa-solid fa-volume-high text-sm';
+            }
+        }
+
+        function toggleShuffle() {
+            isShuffle = !isShuffle;
+            const btn = document.getElementById('shuffle-btn');
+            if (isShuffle) {
+                btn.classList.remove('text-gray-400');
+                btn.classList.add('text-brand-400');
+                showToast('Đã bật phát ngẫu nhiên');
+            } else {
+                btn.classList.add('text-gray-400');
+                btn.classList.remove('text-brand-400');
+                showToast('Đã tắt phát ngẫu nhiên');
+            }
+        }
+
+        function toggleRepeat() {
+            repeatMode = (repeatMode + 1) % 3;
+            const btn = document.getElementById('repeat-btn');
+            
+            if (repeatMode === 0) {
+                btn.className = 'text-gray-400 hover:text-white transition-colors text-xs sm:text-sm p-1.5 relative';
+                btn.innerHTML = '<i class="fa-solid fa-repeat"></i>';
+                showToast('Tắt lặp lại');
+            } else if (repeatMode === 1) {
+                btn.className = 'text-brand-400 transition-colors text-xs sm:text-sm p-1.5 relative';
+                btn.innerHTML = '<i class="fa-solid fa-repeat"></i>';
+                showToast('Lặp lại toàn bộ danh sách');
+            } else {
+                btn.className = 'text-brand-400 transition-colors text-xs sm:text-sm p-1.5 relative';
+                btn.innerHTML = '<i class="fa-solid fa-repeat"></i><span class="absolute -top-0.5 -right-0.5 text-[9px] font-bold bg-brand-500 text-white w-3.5 h-3.5 rounded-full flex items-center justify-center">1</span>';
+                showToast('Lặp lại bài hát hiện tại');
+            }
+        }
+
+        /**
+         * YÊU THÍCH, TÌM KIẾM & LỌC DANH SÁCH
+         */
+        function toggleLikeSong(id) {
+            const song = songsData.find(s => s.id === id);
+            if (!song) return;
+            song.liked = !song.liked;
+            showToast(song.liked ? `Đã thêm "${song.title}" vào Yêu thích` : `Đã bỏ thích "${song.title}"`);
+            updatePlayerUI();
+        }
+
+        function toggleLikeCurrentSong() {
+            toggleLikeSong(songsData[currentSongIndex].id);
+        }
+
+        function toggleLikeCurrentHero() {
+            toggleLikeSong(0);
+        }
+
+        function handleSearch(val) {
+            searchQuery = val.trim();
+            const clearBtn = document.getElementById('clear-search');
+            if (searchQuery.length > 0) {
+                clearBtn.classList.remove('hidden');
+            } else {
+                clearBtn.classList.add('hidden');
+            }
+            renderSongList();
+        }
+
+        function clearSearch() {
+            const input = document.getElementById('search-input');
+            input.value = '';
+            handleSearch('');
+            input.focus();
+        }
+
+        function filterByCategory(category, headingText, btnElement = null) {
+            activeCategory = category;
+            if (headingText) {
+                document.getElementById('section-heading').textContent = headingText;
+            }
+
+            // Cập nhật trạng thái nút Pill nếu có
+            if (btnElement) {
+                document.querySelectorAll('.cat-pill').forEach(pill => {
+                    pill.className = 'cat-pill px-4 py-1.5 rounded-full text-xs font-medium bg-white/5 text-gray-300 hover:bg-white/10 hover:text-white transition-all shrink-0';
+                });
+                btnElement.className = 'cat-pill px-4 py-1.5 rounded-full text-xs font-semibold bg-white text-dark-950 transition-all shrink-0';
+            }
+
+            // Đóng sidebar trên mobile sau khi chọn
+            if (window.innerWidth < 1024) {
+                const sidebar = document.getElementById('sidebar');
+                if (!sidebar.classList.contains('-translate-x-full')) {
+                    toggleMobileSidebar();
+                }
+            }
+
+            renderSongList();
+        }
+
+        /**
+         * ĐIỀU HƯỚNG SIDEBAR & TIỆN ÍCH UI
+         */
+        function switchTab(tabName, btnElement) {
+            document.querySelectorAll('.nav-btn').forEach(btn => {
+                btn.className = 'nav-btn w-full flex items-center gap-3.5 px-3.5 py-2.5 rounded-xl text-sm font-medium text-gray-400 hover:text-white hover:bg-white/5 transition-all';
+                const icon = btn.querySelector('i');
+                if (icon) icon.classList.remove('text-brand-400');
+            });
+
+            btnElement.className = 'nav-btn w-full flex items-center gap-3.5 px-3.5 py-2.5 rounded-xl text-sm font-medium bg-white/10 text-white transition-all';
+            const activeIcon = btnElement.querySelector('i');
+            if (activeIcon) activeIcon.classList.add('text-brand-400');
+
+            const hero = document.getElementById('hero-section');
+            if (tabName === 'home') {
+                hero.classList.remove('hidden');
+                filterByCategory('all', 'Thịnh Hành & Tuyển Chọn');
+            } else if (tabName === 'explore') {
+                hero.classList.add('hidden');
+                filterByCategory('all', 'Khám Phá Âm Nhạc Mới');
+            } else if (tabName === 'library') {
+                hero.classList.add('hidden');
+                // Hiển thị các bài đã thích trong thư viện
+                const likedSongs = songsData.filter(s => s.liked);
+                document.getElementById('section-heading').textContent = 'Thư Viện Cá Nhân (Đã Thích)';
+                document.getElementById('song-count-badge').textContent = `${likedSongs.length} bài hát`;
+                // Render riêng danh sách đã thích
+                const container = document.getElementById('song-list-container');
+                container.innerHTML = likedSongs.map((song, idx) => `
+                    <div onclick="playSongById(${song.id})" class="group grid grid-cols-12 items-center gap-4 px-4 py-2.5 rounded-2xl cursor-pointer hover:bg-white/5 transition-all">
+                        <div class="col-span-1 text-center text-xs text-gray-500">${idx + 1}</div>
+                        <div class="col-span-6 flex items-center gap-3 min-w-0">
+                            <img src="${song.cover}" class="w-11 h-11 rounded-xl object-cover">
+                            <div class="truncate">
+                                <p class="text-sm font-semibold text-white truncate">${song.title}</p>
+                                <p class="text-xs text-gray-400 truncate">${song.artist}</p>
+                            </div>
+                        </div>
+                        <div class="col-span-3 text-xs text-gray-400 hidden sm:block">${song.album}</div>
+                        <div class="col-span-2 text-right text-xs text-gray-400">${formatTime(song.duration)}</div>
+                    </div>
+                `).join('');
+            }
+        }
+
+        function createNewPlaylist() {
+            const menu = document.getElementById('playlist-menu');
+            const count = menu.children.length + 1;
+            const li = document.createElement('li');
+            li.innerHTML = `
+                <button onclick="filterByCategory('all', 'Danh sách phát #${count}')" class="w-full flex items-center gap-3 px-3.5 py-2 rounded-xl text-sm text-gray-400 hover:text-white hover:bg-white/5 transition-all text-left">
+                    <span class="w-6 h-6 rounded-lg bg-gradient-to-br from-purple-500 to-indigo-600 flex items-center justify-center text-[10px] text-white shrink-0">
+                        <i class="fa-solid fa-music"></i>
+                    </span>
+                    <span class="truncate">Danh sách phát #${count}</span>
+                </button>
+            `;
+            menu.appendChild(li);
+            showToast(`Đã tạo "Danh sách phát #${count}"`);
+        }
+
+        function toggleMobileSidebar() {
+            const sidebar = document.getElementById('sidebar');
+            const overlay = document.getElementById('sidebar-overlay');
+            sidebar.classList.toggle('-translate-x-full');
+            overlay.classList.toggle('hidden');
+        }
+
+        // Hệ thống thông báo Toast mượt mà (không dùng alert)
+        function showToast(message) {
+            const container = document.getElementById('toast-container');
+            const toast = document.createElement('div');
+            toast.className = 'glass px-4 py-3 rounded-2xl shadow-xl border border-white/10 text-xs font-medium text-white flex items-center gap-2.5 transform translate-x-full opacity-0 transition-all duration-300';
+            toast.innerHTML = `
+                <i class="fa-solid fa-circle-info text-brand-400"></i>
+                <span>${message}</span>
+            `;
+            container.appendChild(toast);
+
+            // Kích hoạt animation trượt vào
+            requestAnimationFrame(() => {
+                toast.classList.remove('translate-x-full', 'opacity-0');
+            });
+
+            // Tự động ẩn sau 2.8 giây
+            setTimeout(() => {
+                toast.classList.add('translate-x-full', 'opacity-0');
+                setTimeout(() => toast.remove(), 300);
+            }, 2800);
+        }
+
+        // Khởi chạy ứng dụng khi tải xong trang
+        window.addEventListener('DOMContentLoaded', () => {
+            renderSongList();
+            updatePlayerUI();
+        });
+    </script>
+</body>
+</html>
